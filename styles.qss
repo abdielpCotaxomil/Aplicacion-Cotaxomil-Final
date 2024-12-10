@@ -1,0 +1,58 @@
+QMainWindow {
+    background-color: #F0F0F0;
+}
+
+QMenuBar {
+    background-color: #333;
+    color: white;
+}
+
+QMenuBar::item {
+    background-color: #333;
+    color: white;
+}
+
+QMenuBar::item:selected {
+    background-color: #666;
+}
+
+QMenu {
+    background-color: #333;
+    color: white;
+}
+
+QMenu::item:selected {
+    background-color: #666;
+}
+
+QPushButton {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+QPushButton:hover {
+    background-color: #0056b3;
+}
+
+QLineEdit {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+QComboBox {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+QCalendarWidget QAbstractItemView:enabled {
+    background-color: #FFF;
+    selection-background-color: #007BFF;
+    selection-color: white;
+}

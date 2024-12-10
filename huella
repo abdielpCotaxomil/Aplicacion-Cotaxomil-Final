@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <windows.h>
+#include "dpfpdd.h"
+
+void CheckError(DPFPDD_RESULT res, const char* context) {
+    if (res != DPFPDD_SUCCESS) {
+        printf("Error en %s: %d\n", context, res);
+        exit(1);
+    }
+}
+
+void CaptureFingerprint(DPFPDD_DEV* device, DPFPDD_CAPTURE_PARAM* captureParam, DPFPDD_CAPTURE_RESULT* captureResult, unsigned char* imageData) {
+    DPFPDD_RESULT res = dpfpdd_capture(*device, captureParam, captureResult, imageData, sizeof(imageData));
+    CheckError(res, "Captura de huella digital");
+}
+
+void SaveFingerprint(const char* filename, unsigned char* imageData, int imageSize) {
+    FILE* file = fopen(filename, "wb");
+    if (file == NULL) {
+        printf("No se pudo abrir el archivo para guardar la huella digital.\n");
+        exit(1);
+    }
+    fwrite(imageData, 1, imageSize, file);
+    fclose(file);
+}
+
+int CompareFingerprints(const char* filename1, const char* filename2) {
+    FILE *file1, *file2;
+    unsigned char *data1, *data2;
+    int size1, size2;
+    
+    file1 = fopen(filename1, "rb");
+    if (file1 == NULL) {
+        printf("No se pudo abrir el archivo %s.\n", filename1);
+        return 0;
+    }
+    
+    file2 = fopen(filename2, "rb");
+    if (file2 == NULL) {
+        printf("No se pudo abrir el archivo %s.\n", filename2);
+        fclose(file1);
+        return 0;
+    }
+    
+    fseek(file1, 0, SEEK_END);
+    size1 = ftell(file1);
+    fseek(file1, 0, SEEK_SET);
+    
+    fseek(file2, 0, SEEK_END);
+    size2 = ftell(file2);
+    fseek(file2, 0, SEEK_SET);
+    
+    if (size1 != size2) {
+        fclose(file1);
+        fclose(file2);
+        return 0;
+    }
+    
+    data1 = (unsigned char*)malloc(size1);
+    data2 = (unsigned char*)malloc(size2);
+    
+    fread(data1, 1, size1, file1);
+    fread(data2, 1, size2, file2);
+    
+    fclose(file1);
+    fclose(file2);
+    
+    int result = memcmp(data1, data2, size1) == 0;
+    
+    free(data1);
+    free(data2);
+    
+    return result;
+}
+
+int main() {
+    DPFPDD_DEV device;
+    DPFPDD_DEVINFO devInfo;
+    DPFPDD_CAPTURE_PARAM captureParam;
+    DPFPDD_CAPTURE_RESULT captureResult;
+    unsigned char imageData[100000];
+    DPFPDD_RESULT res;
+
+    res = dpfpdd_init();
+    CheckError(res, "Inicialización de DPFPDD");
+
+    res = dpfpdd_query_devices(&devInfo, 1, NULL);
+    CheckError(res, "Consulta de dispositivos");
+
+    res = dpfpdd_open(devInfo.name, &device);
+    CheckError(res, "Apertura de dispositivo");
+
+    captureParam.size = sizeof(DPFPDD_CAPTURE_PARAM);
+    captureParam.image_fmt = DPFPDD_IMG_FMT_ISOIEC19794;
+    captureParam.image_size = sizeof(imageData);
+    captureParam.image_res = DPFPDD_IMAGE_RESOLUTION;
+
+    printf("Coloca tu dedo en el lector para capturar la primera huella digital...\n");
+    CaptureFingerprint(&device, &captureParam, &captureResult, imageData);
+    SaveFingerprint("huella1.bin", imageData, captureResult.image_size);
+
+    printf("Coloca tu dedo en el lector para capturar la segunda huella digital...\n");
+    CaptureFingerprint(&device, &captureParam, &captureResult, imageData);
+    SaveFingerprint("huella2.bin", imageData, captureResult.image_size);
+
+    if (CompareFingerprints("huella1.bin", "huella2.bin")) {
+        printf("Las huellas coinciden.\n");
+    } else {
+        printf("Las huellas no coinciden.\n");
+    }
+
+    res = dpfpdd_close(device);
+    CheckError(res, "Cierre de dispositivo");
+
+    res = dpfpdd_exit();
+    CheckError(res, "Salida de DPFPDD");
+
+    return 0;
+}
